@@ -8,6 +8,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'challenge',
   'coaching',
   'system',
+  'progress',
+  'announcement',
 ]);
 
 export const notifications = pgTable('notifications', {

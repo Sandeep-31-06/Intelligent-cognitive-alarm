@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiCheckCircle, FiMoon, FiClock, FiTarget, FiZap, FiX, FiCheck } from 'react-icons/fi';
+import { FiBell, FiCheckCircle, FiMoon, FiClock, FiTarget, FiZap, FiX, FiCheck, FiAward, FiRadio } from 'react-icons/fi';
 import axios from 'axios';
 
 export interface AppNotification {
   id: string;
-  type: 'bedtime' | 'wakeup' | 'habit' | 'challenge' | 'coaching' | 'system';
+  type: 'bedtime' | 'wakeup' | 'habit' | 'challenge' | 'coaching' | 'system' | 'progress' | 'announcement';
   title: string;
   message: string;
   isRead: boolean;
@@ -33,28 +33,7 @@ export const NotificationCenter: React.FC = () => {
         setUnreadCount(res.data.data.unreadCount || 0);
       }
     } catch (_err) {
-      // Fallback local notifications
-      setNotifications([
-        {
-          id: '1',
-          type: 'bedtime',
-          title: 'Digital Sunset Reminder',
-          message: 'Screen cutoff recommended at 10:15 PM for optimal REM recovery.',
-          isRead: false,
-          scheduledFor: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          type: 'wakeup',
-          title: 'Smart Alarm Set',
-          message: 'Tomorrow wake-up at 07:00 AM with Adaptive Logic Challenge.',
-          isRead: false,
-          scheduledFor: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      setUnreadCount(2);
+      // Keep current state on network error
     } finally {
       setLoading(false);
     }
@@ -62,7 +41,7 @@ export const NotificationCenter: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -108,6 +87,10 @@ export const NotificationCenter: React.FC = () => {
         return <FiTarget className="w-4 h-4 text-emerald-400" />;
       case 'challenge':
         return <FiZap className="w-4 h-4 text-amber-400" />;
+      case 'progress':
+        return <FiAward className="w-4 h-4 text-indigo-400" />;
+      case 'announcement':
+        return <FiRadio className="w-4 h-4 text-rose-400" />;
       default:
         return <FiCheckCircle className="w-4 h-4 text-blue-400" />;
     }

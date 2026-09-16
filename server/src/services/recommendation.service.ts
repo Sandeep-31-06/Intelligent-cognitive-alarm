@@ -4,6 +4,7 @@ import { wakeUpVerifications } from '../db/schema/wakeUpVerifications.js';
 import { snoozeLogs } from '../db/schema/snoozeLogs.js';
 import { sleepLogs } from '../db/schema/sleepLogs.js';
 import { habits } from '../db/schema/habits.js';
+import { profiles } from '../db/schema/profiles.js';
 import { eq } from 'drizzle-orm';
 
 export interface UserTelemetryData {
@@ -16,6 +17,7 @@ export interface UserTelemetryData {
   productivityGoal?: string;
   currentDifficulty?: string;
   habitStreak?: number;
+  typePerformance?: Record<string, { total: number; correct: number; accuracy: number }>;
 }
 
 export interface RecommendationItem {
@@ -50,18 +52,19 @@ export const generateRecommendations = (data: UserTelemetryData): Recommendation
     productivityGoal = 'Maintain peak morning focus',
     currentDifficulty = 'Medium',
     habitStreak = 0,
+    typePerformance = {},
   } = data;
 
-  // 1. Sleep Improvement Recommendations
+  // A. SLEEP IMPROVEMENT RECOMMENDATIONS
   if (sleepAdherence > 0 && sleepAdherence < 75) {
     recommendations.push({
       id: `rec-sleep-${Date.now()}-1`,
       category: 'Sleep Improvement',
-      title: 'Maintain a Consistent Bedtime Schedule',
-      description: 'Go to sleep and wake up within a 20-minute window every day, including weekends.',
+      title: 'Improve Sleep Consistency',
+      description: 'Your recent sleep schedule has been inconsistent. Try maintaining a consistent bedtime.',
       reason: `Sleep schedule adherence is currently at ${sleepAdherence}%. Irregular bedtimes cause circadian disruption.`,
       priority: 'high',
-      actionableStep: 'Set a fixed bedtime reminder for 10:30 PM.',
+      actionableStep: 'Set a fixed bedtime reminder 30 minutes before your target sleep time.',
       created_at: nowStr,
     });
   } else if (sleepAdherence >= 75) {
@@ -69,108 +72,153 @@ export const generateRecommendations = (data: UserTelemetryData): Recommendation
       id: `rec-sleep-${Date.now()}-2`,
       category: 'Sleep Improvement',
       title: 'Maintain Optimal Sleep Rhythm',
-      description: 'Your sleep schedule adherence is solid. Keep protecting your pre-sleep wind-down routine.',
-      reason: `Sleep schedule adherence is high (${sleepAdherence}%).`,
+      description: 'Your recent sleep schedule has been consistent. Keep protecting your bedtime routine.',
+      reason: `Sleep schedule adherence is strong at ${sleepAdherence}%.`,
       priority: 'low',
-      actionableStep: 'Continue avoiding screens 30 minutes before bedtime.',
+      actionableStep: 'Continue avoiding blue light exposure 30 minutes before bedtime.',
       created_at: nowStr,
     });
   }
 
-  // 2. Wake-Up Optimization Suggestions
-  if (snoozeCountLast7Days >= 3) {
+  // B. WAKE-UP OPTIMIZATION SUGGESTIONS
+  if (snoozeCountLast7Days > 0) {
     recommendations.push({
-      id: `rec-snooze-${Date.now()}-1`,
+      id: `rec-wakeup-${Date.now()}-1`,
       category: 'Wake-Up Optimization',
-      title: 'Reduce Repeated Snoozing with Adaptive Puzzles',
-      description: 'You snoozed 3+ times recently. Elevating morning puzzle difficulty prevents reflexive snoozing.',
-      reason: `Frequent snoozing (${snoozeCountLast7Days} times recently) indicates morning REM disruption and sleep inertia.`,
+      title: 'Reduce Morning Snoozing',
+      description: 'You have been snoozing your alarms frequently. Try responding to the first alarm.',
+      reason: `Recorded ${snoozeCountLast7Days} snooze event(s) recently, which fragment REM sleep and elevate morning inertia.`,
       priority: 'high',
-      actionableStep: 'Enable Smart Adaptive Difficulty in your alarm settings.',
+      actionableStep: 'Enable cognitive puzzle verification on your first alarm.',
       created_at: nowStr,
     });
   } else if (wakeUpConsistency > 0 && wakeUpConsistency < 75) {
     recommendations.push({
-      id: `rec-wakeup-${Date.now()}-1`,
+      id: `rec-wakeup-${Date.now()}-2`,
       category: 'Wake-Up Optimization',
-      title: 'Establish a Fixed Morning Light & Hydration Routine',
-      description: 'Combine immediate natural light exposure with hydration right after solving your alarm challenge.',
-      reason: `Wake-up consistency is currently at ${wakeUpConsistency}%. Bright light halts melatonin secretion immediately.`,
+      title: 'Improve Wake-Up Consistency',
+      description: 'Your recent wake-up times are later than your scheduled alarm.',
+      reason: `Wake-up consistency is currently at ${wakeUpConsistency}%.`,
       priority: 'high',
-      actionableStep: 'Open curtains immediately after completing the wake-up verification puzzle.',
+      actionableStep: 'Place your wake-up device further from your bed.',
+      created_at: nowStr,
+    });
+  } else {
+    recommendations.push({
+      id: `rec-wakeup-${Date.now()}-3`,
+      category: 'Wake-Up Optimization',
+      title: 'Optimal Wake-Up Response',
+      description: 'You are responding to alarms promptly without excessive snoozing.',
+      reason: `Wake-up consistency is high (${wakeUpConsistency}%).`,
+      priority: 'low',
+      actionableStep: 'Keep maintaining your prompt wake-up routine.',
       created_at: nowStr,
     });
   }
 
-  // 3. Habit Improvement Guidance (identifies weakest component)
+  // C. HABIT IMPROVEMENT GUIDANCE (identifies weakest component from Module 8)
+  const snoozeReduction = Math.max(0, 100 - snoozeCountLast7Days * 15);
   const compScores = [
-    { name: 'Wake-Up Consistency', score: wakeUpConsistency, category: 'Habit Improvement' },
-    { name: 'Challenge Completion', score: challengeAccuracy, category: 'Habit Improvement' },
-    { name: 'Snooze Reduction', score: 100 - snoozeCountLast7Days * 12, category: 'Habit Improvement' },
-    { name: 'Sleep Schedule Adherence', score: sleepAdherence, category: 'Habit Improvement' },
+    { name: 'Snooze Reduction', score: snoozeReduction, recommendationTitle: 'Focus on Reducing Snoozes', description: 'Snooze reduction is currently your weakest habit area. Reducing repeated snoozes can improve your overall Habit Score.' },
+    { name: 'Wake-Up Consistency', score: wakeUpConsistency, recommendationTitle: 'Improve Wake-Up Consistency', description: 'Focus on waking closer to your scheduled alarm time.' },
+    { name: 'Challenge Completion', score: challengeAccuracy, recommendationTitle: 'Focus on Challenge Completion', description: 'Completing cognitive challenges on your first attempt will boost your overall Habit Score.' },
+    { name: 'Sleep Schedule Adherence', score: sleepAdherence, recommendationTitle: 'Improve Sleep Schedule Adherence', description: 'Maintaining a consistent bedtime schedule will improve your overall Habit Score.' },
   ];
   compScores.sort((a, b) => a.score - b.score);
   const weakest = compScores[0];
 
-  if (weakest.score < 70) {
-    recommendations.push({
-      id: `rec-habit-${Date.now()}-1`,
-      category: 'Habit Improvement',
-      title: `Optimize ${weakest.name}`,
-      description: `Your ${weakest.name} score is currently your lowest habit component (${Math.max(0, Math.round(weakest.score))}%). Focused improvement here yields the largest Habit Score increase.`,
-      reason: `${weakest.name} is detected as your primary bottleneck for behavioral consistency.`,
-      priority: 'high',
-      actionableStep: `Prioritize ${weakest.name.toLowerCase()} targets for the next 7 days.`,
-      created_at: nowStr,
-    });
-  } else if (habitStreak >= 5) {
-    recommendations.push({
-      id: `rec-habit-${Date.now()}-2`,
-      category: 'Habit Improvement',
-      title: 'Maintain Your Current Habit Routine',
-      description: `You have built a strong habit streak of ${habitStreak} days! Stack a new morning focus ritual onto this foundation.`,
-      reason: `Consistent habit completion (${habitStreak}-day streak) strengthens neural habit loops.`,
-      priority: 'low',
-      actionableStep: 'Keep completing your daily morning habits.',
-      created_at: nowStr,
-    });
-  }
+  recommendations.push({
+    id: `rec-habit-${Date.now()}-1`,
+    category: 'Habit Improvement',
+    title: weakest.recommendationTitle,
+    description: weakest.description,
+    reason: `${weakest.name} (${Math.round(weakest.score)}%) is currently detected as your weakest habit component.`,
+    priority: 'high',
+    actionableStep: `Focus on improving your ${weakest.name.toLowerCase()} targets over the next 7 days.`,
+    created_at: nowStr,
+  });
 
-  // 4. Productivity Recommendations
+  // D. PRODUCTIVITY RECOMMENDATIONS
   if (productivityGoal) {
-    recommendations.push({
-      id: `rec-prod-${Date.now()}-1`,
-      category: 'Productivity',
-      title: 'Align Awakening Routine with Productivity Goal',
-      description: `Your goal is "${productivityGoal}". Achieving top morning wake-up consistency creates an immediate focus window.`,
-      reason: `Morning behavioral discipline directly correlates with achieving your productivity goal: "${productivityGoal}".`,
-      priority: 'medium',
-      actionableStep: 'Schedule 30 minutes of deep focus work within 1 hour of waking up.',
-      created_at: nowStr,
-    });
+    if (wakeUpConsistency < 75 || snoozeCountLast7Days > 0) {
+      recommendations.push({
+        id: `rec-prod-${Date.now()}-1`,
+        category: 'Productivity',
+        title: 'Protect Your Morning Productivity',
+        description: `Your recent wake-up pattern is reducing the time available for your morning productivity goal.`,
+        reason: `Morning delay directly impacts your target goal: "${productivityGoal}".`,
+        priority: 'medium',
+        actionableStep: `Schedule dedicated time for "${productivityGoal}" immediately after morning awakening.`,
+        created_at: nowStr,
+      });
+    } else {
+      recommendations.push({
+        id: `rec-prod-${Date.now()}-2`,
+        category: 'Productivity',
+        title: 'Maximize Morning Productivity Window',
+        description: `Your consistent wake-up routine protects your primary morning goal: "${productivityGoal}".`,
+        reason: `High wake-up discipline aligns with your goal: "${productivityGoal}".`,
+        priority: 'medium',
+        actionableStep: 'Leverage your peak morning alertness for deep focus tasks.',
+        created_at: nowStr,
+      });
+    }
   }
 
-  // 5. Personalized Challenge Recommendations
-  if (challengeAccuracy > 0 && challengeAccuracy < 65) {
+  // E. PERSONALIZED CHALLENGE RECOMMENDATIONS
+  // Check if specific challenge types are weaker
+  let weakestType = '';
+  let lowestAccuracy = 100;
+  Object.entries(typePerformance).forEach(([type, perf]) => {
+    if (perf.total >= 1 && perf.accuracy < lowestAccuracy) {
+      lowestAccuracy = perf.accuracy;
+      weakestType = type;
+    }
+  });
+
+  if (challengeAccuracy >= 80 && currentDifficulty.toLowerCase() === 'easy') {
     recommendations.push({
-      id: `rec-diff-${Date.now()}-1`,
+      id: `rec-challenge-${Date.now()}-1`,
       category: 'Personalized Challenges',
-      title: 'Temporarily Lower Challenge Difficulty',
-      description: 'Step down your puzzle difficulty to Easy or Moderate to build confidence and reduce morning friction.',
-      reason: `Recent challenge accuracy is low (${challengeAccuracy}%), leading to multiple failed attempts during wake-up.`,
+      title: 'Try a Higher Difficulty',
+      description: 'You are consistently performing well on Easy challenges. Consider trying Medium difficulty.',
+      reason: `Recent challenge accuracy is high (${challengeAccuracy}%). Step up difficulty to maintain cognitive stimulation.`,
       priority: 'medium',
-      actionableStep: 'Select Easy Math or Word puzzles in your alarm settings.',
+      actionableStep: 'Switch challenge settings to Medium or Moderate difficulty.',
       created_at: nowStr,
     });
-  } else if (challengeAccuracy >= 85 && averageChallengeTime <= 10) {
+  } else if (weakestType && lowestAccuracy < 65) {
+    const formattedType = weakestType.charAt(0).toUpperCase() + weakestType.slice(1);
     recommendations.push({
-      id: `rec-diff-${Date.now()}-2`,
+      id: `rec-challenge-${Date.now()}-2`,
       category: 'Personalized Challenges',
-      title: 'Increase Cognitive Challenge Difficulty',
-      description: 'Your accuracy is consistently high (85%+). Elevate puzzle difficulty to Hard or Expert to maximize cognitive arousal.',
-      reason: `Rapid solving speed (${averageChallengeTime}s avg) and accuracy (${challengeAccuracy}%) show mastery of ${currentDifficulty} level.`,
+      title: `Practice ${formattedType} Challenges`,
+      description: `Your recent ${formattedType} challenge performance is lower than your other challenge types.`,
+      reason: `${formattedType} accuracy is ${lowestAccuracy}%, which is your lowest challenge category.`,
       priority: 'medium',
-      actionableStep: 'Try Memory Matrix or Pattern puzzles for tomorrow morning.',
+      actionableStep: `Select ${formattedType} puzzles for your next practice sessions.`,
+      created_at: nowStr,
+    });
+  } else if (challengeAccuracy > 0 && challengeAccuracy < 60) {
+    recommendations.push({
+      id: `rec-challenge-${Date.now()}-3`,
+      category: 'Personalized Challenges',
+      title: 'Use an Appropriate Difficulty',
+      description: 'Your recent challenge accuracy has decreased. Consider using a lower difficulty level temporarily.',
+      reason: `Overall challenge accuracy is at ${challengeAccuracy}%. Lowering difficulty helps build confidence.`,
+      priority: 'medium',
+      actionableStep: 'Temporarily switch to Easy puzzles to build morning speed.',
+      created_at: nowStr,
+    });
+  } else {
+    recommendations.push({
+      id: `rec-challenge-${Date.now()}-4`,
+      category: 'Personalized Challenges',
+      title: 'Maintain Challenge Variety',
+      description: 'Your challenge performance is steady. Continue rotating across math, logic, and memory puzzles.',
+      reason: `Challenge accuracy is currently ${challengeAccuracy}%.`,
+      priority: 'low',
+      actionableStep: 'Try new puzzle categories to challenge different cognitive functions.',
       created_at: nowStr,
     });
   }
@@ -191,9 +239,17 @@ export const getRecommendationsForUser = async (userId: string): Promise<Recomme
   let habitStreak = 0;
   let productivityGoal = 'Maintain peak morning focus';
   let hasSufficientData = false;
+  const typePerformance: Record<string, { total: number; correct: number; accuracy: number }> = {};
 
   if (await isDbConnected()) {
     try {
+      // User Profile details
+      const userProfiles = await db.select().from(profiles).where(eq(profiles.userId, userId));
+      if (userProfiles.length > 0) {
+        if (userProfiles[0].productivityGoal) productivityGoal = userProfiles[0].productivityGoal;
+        if (userProfiles[0].difficultyPreference) currentDifficulty = userProfiles[0].difficultyPreference;
+      }
+
       // Challenge attempts
       const attempts = await db.select().from(challengeAttempts).where(eq(challengeAttempts.userId, userId));
       if (attempts.length > 0) {
@@ -202,6 +258,14 @@ export const getRecommendationsForUser = async (userId: string): Promise<Recomme
         challengeAccuracy = Math.round((correct / attempts.length) * 100);
         const totalTime = attempts.reduce((acc, curr) => acc + (curr.timeTaken || 0), 0);
         averageChallengeTime = Math.round((totalTime / attempts.length) * 10) / 10 || 0;
+
+        attempts.forEach((a) => {
+          const t = a.challengeType || 'math';
+          if (!typePerformance[t]) typePerformance[t] = { total: 0, correct: 0, accuracy: 0 };
+          typePerformance[t].total += 1;
+          if (a.isCorrect) typePerformance[t].correct += 1;
+          typePerformance[t].accuracy = Math.round((typePerformance[t].correct / typePerformance[t].total) * 100);
+        });
       }
 
       // Wake-up verifications
@@ -248,6 +312,7 @@ export const getRecommendationsForUser = async (userId: string): Promise<Recomme
     currentDifficulty,
     productivityGoal,
     habitStreak,
+    typePerformance,
   });
 };
 
@@ -268,4 +333,5 @@ export const getRecommendationsByCategory = async (
     return recCat === normalizedCategory;
   });
 };
+
 

@@ -98,7 +98,20 @@ export const AlarmsPage: React.FC = () => {
     setAlarmTitle(a.alarmTitle);
     setAlarmTime(a.alarmTime);
     setRepeatType(a.repeatType);
-    setRepeatDays(a.repeatDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+
+    let parsedDays: string[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    if (a.repeatDays) {
+      if (typeof a.repeatDays === 'string') {
+        try {
+          parsedDays = JSON.parse(a.repeatDays);
+        } catch (_e) {
+          parsedDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        }
+      } else if (Array.isArray(a.repeatDays)) {
+        parsedDays = a.repeatDays;
+      }
+    }
+    setRepeatDays(parsedDays);
     setDifficultyLevel(a.difficultyLevel || 'Moderate');
     setSound(a.sound);
     setVibration(a.vibration);
@@ -181,8 +194,9 @@ export const AlarmsPage: React.FC = () => {
       }
       const nextRes = await alarmService.checkNextAlarm();
       if (nextRes.success && nextRes.data) setNextAlarm(nextRes.data.nextAlarm);
-    } catch (err) {
-      toast.error('Save Error', 'Failed to save alarm schedule');
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.errors?.[0]?.message || err?.response?.data?.message || 'Failed to save alarm schedule';
+      toast.error('Save Error', errorMessage);
     } finally {
       setIsSaving(false);
     }

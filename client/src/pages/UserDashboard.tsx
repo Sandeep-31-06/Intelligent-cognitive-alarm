@@ -57,6 +57,11 @@ export const UserDashboard: React.FC = () => {
   const [newHabitTarget, setNewHabitTarget] = useState(7);
   const [isSavingHabit, setIsSavingHabit] = useState(false);
 
+  const [alarmHistory, setAlarmHistory] = useState<any[]>([]);
+  const [wakeUpStats, setWakeUpStats] = useState<any | null>(null);
+  const [challengePerformance, setChallengePerformance] = useState<any | null>(null);
+  const [productivityInsights, setProductivityInsights] = useState<string[]>([]);
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -67,18 +72,25 @@ export const UserDashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [alarmRes, habitRes, profileRes, ovRes, recRes] = await Promise.allSettled([
+      const [alarmRes, habitRes, profileRes, dashRes, recRes] = await Promise.allSettled([
         alarmService.getAlarms(),
         habitService.getHabits(),
         profileService.getProfile(),
-        axios.get('/api/analytics/overview', { headers }),
+        axios.get('/api/dashboard', { headers }),
         axios.get('/api/recommendations', { headers }),
       ]);
 
       if (alarmRes.status === 'fulfilled' && alarmRes.value.success && alarmRes.value.data) setAlarms(alarmRes.value.data.alarms);
       if (habitRes.status === 'fulfilled' && habitRes.value.success && habitRes.value.data) setHabits(habitRes.value.data.habits);
       if (profileRes.status === 'fulfilled' && profileRes.value.success && profileRes.value.data) setProfile(profileRes.value.data.profile);
-      if (ovRes.status === 'fulfilled') setOverview(ovRes.value.data?.data);
+      if (dashRes.status === 'fulfilled') {
+        const dData = dashRes.value.data?.data;
+        setOverview(dData?.overview || null);
+        setAlarmHistory(dData?.alarmHistory || []);
+        setWakeUpStats(dData?.wakeUpStats || null);
+        setChallengePerformance(dData?.challengePerformance || null);
+        setProductivityInsights(dData?.productivityInsights || []);
+      }
       if (recRes.status === 'fulfilled') setRecommendations(recRes.value.data?.data?.recommendations || []);
     } catch (_err: any) {
       toast.error('Data Fetch Error', 'Failed to load user dashboard resources');
@@ -315,75 +327,196 @@ export const UserDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Recommended Action Section & Recent Behavior */}
+        {/* Detailed Module 10 Analytics Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recommended Action Section */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <FiCompass className="text-cyan-400" /> Recommended Actions Engine
+          {/* 1. Habit Score Component Breakdown & Wake-Up Statistics */}
+          <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/10 to-slate-900 space-y-4">
+            <h2 className="text-base font-bold text-white flex items-center justify-between">
+              <span className="flex items-center gap-2"><FiAward className="text-cyan-400" /> Habit Score Component Breakdown</span>
+              <span className="text-sm font-extrabold text-cyan-300">
+                {overview?.hasSufficientData ? `${overview?.habitScore?.overall_score}/100` : 'No data yet'}
+              </span>
             </h2>
 
-            {recommendations.length === 0 ? (
-              <div className="text-xs text-slate-400 py-4">No active recommendations. Complete more activities to generate insights.</div>
-            ) : (
-              <div className="space-y-3">
-                {recommendations.slice(0, 3).map((rec) => (
-                  <div key={rec.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                        {rec.category}
-                      </span>
-                      <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                        rec.priority === 'high' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'
-                      }`}>
-                        {rec.priority}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-white text-xs">{rec.title}</h3>
-                    <p className="text-slate-300 text-[11px]">{rec.description}</p>
-                    <p className="text-[10px] text-slate-400 italic">Reason: {rec.reason}</p>
+            {overview?.hasSufficientData ? (
+              <div className="space-y-3 text-xs">
+                <div>
+                  <div className="flex justify-between text-slate-300 font-semibold mb-1">
+                    <span>Wake-Up Consistency (35%)</span>
+                    <span>{overview?.habitScore?.components?.wake_up_consistency || 0}%</span>
                   </div>
-                ))}
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${overview?.habitScore?.components?.wake_up_consistency || 0}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-slate-300 font-semibold mb-1">
+                    <span>Challenge Completion (25%)</span>
+                    <span>{overview?.habitScore?.components?.challenge_completion || 0}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${overview?.habitScore?.components?.challenge_completion || 0}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-slate-300 font-semibold mb-1">
+                    <span>Snooze Reduction (20%)</span>
+                    <span>{overview?.habitScore?.components?.snooze_reduction || 0}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${overview?.habitScore?.components?.snooze_reduction || 0}%` }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-slate-300 font-semibold mb-1">
+                    <span>Sleep Schedule Adherence (20%)</span>
+                    <span>{overview?.habitScore?.components?.sleep_schedule_adherence || 0}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${overview?.habitScore?.components?.sleep_schedule_adherence || 0}%` }} />
+                  </div>
+                </div>
+
+                {/* Wake-Up Statistics Summary */}
+                <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-3 text-center">
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block uppercase">On-Time Wake-ups</span>
+                    <span className="text-base font-black text-emerald-400">{wakeUpStats?.onTimeWakeUps ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block uppercase">Average Delay</span>
+                    <span className="text-base font-black text-amber-400">{wakeUpStats?.averageWakeUpDelayMinutes ?? 0} min</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400 py-6 text-center">
+                No data yet. Complete morning awakenings to view breakdown.
               </div>
             )}
           </div>
 
-          {/* Recent Behavior & Alarms Section */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <FiActivity className="text-blue-400" /> Recent Behavior & Awakening Routine
+          {/* 2. Challenge Performance Breakdown & Productivity Insights */}
+          <div className="glass-panel p-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-b from-indigo-950/10 to-slate-900 space-y-4">
+            <h2 className="text-base font-bold text-white flex items-center justify-between">
+              <span className="flex items-center gap-2"><FiZap className="text-indigo-400" /> Challenge Performance & Insights</span>
+              <span className="text-sm font-extrabold text-indigo-300">
+                {challengePerformance?.hasSufficientData ? `${challengePerformance.accuracyRate}% Accuracy` : 'No data yet'}
+              </span>
             </h2>
 
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
-                <div>
-                  <span className="font-bold text-white block">Scheduled Awakening</span>
-                  <span className="text-[10px] text-slate-400">{nextAlarm ? nextAlarm.alarmTitle : 'No Alarm Set'}</span>
+            {challengePerformance?.hasSufficientData ? (
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block">Total Attempts</span>
+                    <span className="text-sm font-bold text-white">{challengePerformance.totalAttempts}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block">Accuracy</span>
+                    <span className="text-sm font-bold text-emerald-400">{challengePerformance.accuracyRate}%</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block">Avg Speed</span>
+                    <span className="text-sm font-bold text-cyan-300">{challengePerformance.averageTimeSeconds}s</span>
+                  </div>
                 </div>
-                <span className="font-mono text-sm font-bold text-blue-300">{nextAlarm ? nextAlarm.alarmTime : '--:--'}</span>
-              </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                {/* Performance by Type */}
                 <div>
-                  <span className="font-bold text-white block">Sleep Schedule Adherence</span>
-                  <span className="text-[10px] text-slate-400">Target Bedtime: 11:00 PM</span>
+                  <span className="text-[11px] font-bold text-slate-300 block mb-1">Performance by Category</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {challengePerformance?.byCategory?.map((cat: any) => (
+                      <div key={cat.type} className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex justify-between items-center">
+                        <span className="capitalize font-semibold text-slate-300">{cat.type}</span>
+                        <span className="font-bold text-indigo-400">{cat.accuracy}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span className="font-bold text-emerald-400">
-                  {overview?.hasSufficientData ? `${overview?.sleepAdherenceRate}% Rate` : 'No data yet'}
-                </span>
               </div>
+            ) : (
+              <div className="text-xs text-slate-400 py-4 text-center">
+                Complete more challenges to view performance analytics.
+              </div>
+            )}
 
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
-                <div>
-                  <span className="font-bold text-white block">Cognitive Puzzle Accuracy</span>
-                  <span className="text-[10px] text-slate-400">Math & Logic Challenges</span>
+            {/* Productivity Insights */}
+            <div className="pt-3 border-t border-slate-800 space-y-2">
+              <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                <FiCompass /> Productivity Insights
+              </span>
+              {productivityInsights.length === 0 ? (
+                <p className="text-xs text-slate-400">Complete more activities to generate insights.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {productivityInsights.map((insight, idx) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 flex items-start gap-2">
+                      <FiTrendingUp className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                      <span>{insight}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="font-bold text-indigo-300">
-                  {overview?.hasSufficientData ? `${overview?.challengeAccuracy}%` : 'No data yet'}
-                </span>
-              </div>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Real Alarm History Table */}
+        <div className="space-y-4">
+          <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <FiClock className="text-blue-400" /> Alarm History
+          </h2>
+
+          {alarmHistory.length === 0 ? (
+            <div className="glass-panel p-6 text-center text-xs text-slate-400 rounded-2xl">
+              No alarm history yet.
+            </div>
+          ) : (
+            <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-900/80 border-b border-slate-800 text-slate-400 uppercase font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Alarm Title</th>
+                      <th className="py-3 px-4">Scheduled Time</th>
+                      <th className="py-3 px-4">Repeat Pattern</th>
+                      <th className="py-3 px-4">Date</th>
+                      <th className="py-3 px-4">Snoozes</th>
+                      <th className="py-3 px-4 text-right">Completion Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {alarmHistory.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="py-3 px-4 font-bold text-white">{item.alarmTitle}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-blue-300">{item.alarmTime}</td>
+                        <td className="py-3 px-4 capitalize text-slate-300">{item.repeatType}</td>
+                        <td className="py-3 px-4 text-slate-400">{item.date}</td>
+                        <td className="py-3 px-4 text-purple-300 font-semibold">{item.snoozeInfo}</td>
+                        <td className="py-3 px-4 text-right">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'Completed'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : item.status === 'Active'
+                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Alarm & Habit Modals */}

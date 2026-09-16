@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { UserRole } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
+import { NotificationCenter } from '../NotificationCenter';
 
 interface NavbarProps {
   onToggleMobileSidebar?: () => void;
@@ -105,36 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileSidebar }) => {
           </button>
 
           {/* Notifications Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications((prev) => !prev)}
-              className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Notifications"
-            >
-              <FiBell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500" />
-            </button>
-
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 rounded-2xl glass-panel border border-slate-800 shadow-2xl p-4 z-50 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">System Alerts</h4>
-                  <span className="text-[10px] text-blue-400 font-semibold">2 New</span>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-500/20 text-slate-200">
-                    <p className="font-semibold text-blue-300">Foundation Mode Active</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">JWT Auth & RBAC modules successfully synchronized.</p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-slate-200">
-                    <p className="font-semibold text-emerald-300">Alarm Engine Ready</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">3 active cognitive alarms initialized for current user.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <NotificationCenter />
 
           {/* Profile Menu Dropdown */}
           <div className="relative">

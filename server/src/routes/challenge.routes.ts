@@ -17,7 +17,7 @@ router.get('/analytics', authenticateToken, getChallengeAnalytics);
 router.get('/attempts', authenticateToken, getChallengeAttempts);
 
 router.post('/generate', generateChallengeEndpoint);
-router.post('/validate', validateChallengeAnswer);
+router.post('/validate', authenticateToken, validateChallengeAnswer);
 
 router.post('/', authenticateToken, createChallenge);
 router.get('/', getChallenges);

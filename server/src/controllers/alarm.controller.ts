@@ -198,13 +198,27 @@ export const updateAlarm = async (
       throw new AppError('Alarm not found', 404);
     }
 
+    const setPayload: Record<string, any> = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    if (updates.repeatDays !== undefined) {
+      setPayload.repeatDays = typeof updates.repeatDays === 'string'
+        ? updates.repeatDays
+        : JSON.stringify(updates.repeatDays);
+    }
+
+    if (updates.repeatType === 'smart_adaptive') {
+      setPayload.difficultyLevel = calculateSmartAdaptiveDifficulty({
+        difficultyPreference: updates.difficultyLevel || existing.difficultyLevel || 'Moderate',
+        snoozeCountLast7Days: 1,
+      });
+    }
+
     const [updatedAlarm] = await db
       .update(alarms)
-      .set({
-        ...updates,
-        repeatDays: updates.repeatDays ? JSON.stringify(updates.repeatDays) : undefined,
-        updatedAt: new Date(),
-      })
+      .set(setPayload)
       .where(and(eq(alarms.id, id), eq(alarms.userId, userId)))
       .returning();
 

@@ -187,9 +187,9 @@ export const ChallengesPage: React.FC = () => {
                 <FiBarChart2 className="w-5 h-5 text-blue-400" />
               </div>
               <p className="text-2xl font-extrabold text-white mt-2">
-                {analytics?.total_challenges || attemptsHistory.length || 0}
+                {analytics?.total_challenges ?? attemptsHistory.length}
               </p>
-              <span className="text-[10px] text-slate-500 font-semibold">Completed sessions</span>
+              <span className="text-[10px] text-slate-500 font-semibold">Total puzzle attempts</span>
             </div>
 
             <div className="glass-card p-5 rounded-2xl border border-slate-800">
@@ -198,7 +198,7 @@ export const ChallengesPage: React.FC = () => {
                 <FiTrendingUp className="w-5 h-5 text-emerald-400" />
               </div>
               <p className="text-2xl font-extrabold text-emerald-400 mt-2">
-                {analytics?.accuracy_percentage || 85}%
+                {analytics?.accuracy_percentage ?? 0}%
               </p>
               <span className="text-[10px] text-emerald-500/80 font-semibold">Target &gt; 80%</span>
             </div>
@@ -209,20 +209,40 @@ export const ChallengesPage: React.FC = () => {
                 <FiClock className="w-5 h-5 text-amber-400" />
               </div>
               <p className="text-2xl font-extrabold text-white mt-2">
-                {analytics?.average_completion_time_seconds || 7}s
+                {analytics?.average_completion_time_seconds ?? 0}s
               </p>
               <span className="text-[10px] text-slate-500 font-semibold">Per challenge</span>
             </div>
 
             <div className="glass-card p-5 rounded-2xl border border-slate-800">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Correct Solved</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Solved Progress</span>
                 <FiCheckCircle className="w-5 h-5 text-indigo-400" />
               </div>
-              <p className="text-2xl font-extrabold text-indigo-300 mt-2">
-                {analytics?.correct_answers || attemptsHistory.filter((a) => a.isCorrect).length || 0}
-              </p>
-              <span className="text-[10px] text-slate-500 font-semibold">Passed puzzles</span>
+              <div className="mt-2 flex items-baseline gap-2">
+                <p className="text-2xl font-extrabold text-indigo-300">
+                  Solved: {analytics?.correct_answers ?? attemptsHistory.filter((a) => a.isCorrect).length} / {analytics?.total_challenges ?? attemptsHistory.length}
+                </p>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div
+                  className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${
+                      (analytics?.total_challenges || attemptsHistory.length) > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              ((analytics?.correct_answers ?? attemptsHistory.filter((a) => a.isCorrect).length) /
+                                (analytics?.total_challenges || attemptsHistory.length)) *
+                                100
+                            )
+                          )
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -328,41 +348,48 @@ export const ChallengesPage: React.FC = () => {
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                   <tr>
+                    <th className="py-3 px-4">Challenge</th>
                     <th className="py-3 px-4">Type</th>
                     <th className="py-3 px-4">Difficulty</th>
-                    <th className="py-3 px-4">Answer</th>
                     <th className="py-3 px-4">Result</th>
-                    <th className="py-3 px-4">Time Taken</th>
-                    <th className="py-3 px-4">Completed</th>
+                    <th className="py-3 px-4">Attempts</th>
+                    <th className="py-3 px-4">Time</th>
+                    <th className="py-3 px-4">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-medium">
                   {attemptsHistory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-slate-500">
+                      <td colSpan={7} className="py-6 text-center text-slate-500">
                         No challenge attempts recorded yet. Solve your first puzzle above!
                       </td>
                     </tr>
                   ) : (
-                    attemptsHistory.map((att) => (
+                    attemptsHistory.map((att, idx) => (
                       <tr key={att.id} className="hover:bg-slate-900/40">
-                        <td className="py-3 px-4 font-bold text-white capitalize">{att.challengeType}</td>
+                        <td className="py-3 px-4 font-bold text-white">Question {attemptsHistory.length - idx}</td>
+                        <td className="py-3 px-4 font-semibold capitalize text-slate-200">{att.challengeType}</td>
                         <td className="py-3 px-4 capitalize">{att.difficulty}</td>
-                        <td className="py-3 px-4 font-mono text-slate-300">{att.answer}</td>
                         <td className="py-3 px-4">
                           {att.isCorrect ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
-                              <FiCheckCircle className="w-3.5 h-3.5" /> Correct
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                              <FiCheckCircle className="w-3.5 h-3.5" /> Completed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-rose-400 font-bold">
-                              <FiHelpCircle className="w-3.5 h-3.5" /> Incorrect
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold">
+                              <FiHelpCircle className="w-3.5 h-3.5" /> Failed
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-mono">{att.timeTaken}s</td>
+                        <td className="py-3 px-4 font-mono text-slate-300">1</td>
+                        <td className="py-3 px-4 font-mono">{att.timeTaken} sec</td>
                         <td className="py-3 px-4 text-slate-400">
-                          {new Date(att.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(att.completedAt).toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </td>
                       </tr>
                     ))

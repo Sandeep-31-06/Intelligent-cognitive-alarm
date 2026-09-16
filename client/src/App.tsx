@@ -19,14 +19,17 @@ import { AccessDenied } from './pages/AccessDenied';
 import { NotFound } from './pages/NotFound';
 
 import { UserAnalytics } from './pages/UserAnalytics';
+import { ReportsPage } from './pages/Reports';
 
 import { ThemeProvider } from './context/ThemeContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
@@ -42,6 +45,7 @@ export const App: React.FC = () => {
                 <Route path="/user/dashboard" element={<UserDashboard />} />
                 <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
                 <Route path="/analytics" element={<UserAnalytics />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/alarms" element={<AlarmsPage />} />
                 <Route path="/challenges" element={<ChallengesPage />} />
                 <Route path="/habits" element={<HabitsPage />} />
@@ -68,7 +72,8 @@ export const App: React.FC = () => {
         </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
-  );
+  </ErrorBoundary>
+);
 };
 
 export default App;

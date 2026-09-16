@@ -259,7 +259,7 @@ export const CoachDashboard: React.FC = () => {
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
                   <div className="text-[10px] text-slate-400">Habit Score</div>
                   <div className="text-lg font-bold text-cyan-400">
-                    {traineeDetail?.overview?.hasSufficientData ? `${traineeDetail.overview.habitScore.overall_score} / 100` : 'No data yet'}
+                    {traineeDetail?.overview?.hasSufficientData && traineeDetail?.overview?.habitScore ? `${traineeDetail.overview.habitScore.overall_score} / 100` : 'No data yet'}
                   </div>
                 </div>
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
@@ -282,11 +282,29 @@ export const CoachDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Adaptive Difficulty & Rationale</h4>
-                <p className="text-xs text-slate-300">
-                  {traineeDetail?.adaptiveDifficulty?.reason || 'No activity telemetry available yet for this user.'}
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                  <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Sleep Trend Report</h4>
+                  {traineeDetail?.sleepTrendReport?.dataAvailable ? (
+                    <div className="text-xs space-y-1">
+                      <p className="text-slate-300">Total Sleep Logs: <span className="font-bold text-white">{traineeDetail.sleepTrendReport.totalLogs}</span></p>
+                      <p className="text-slate-300">Avg Duration: <span className="font-bold text-cyan-300">{traineeDetail.sleepTrendReport.avgDurationHours}h</span></p>
+                      <p className="text-slate-300">Adherence: <span className="font-bold text-emerald-400">{traineeDetail.sleepTrendReport.sleepAdherence}</span></p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">Insufficient sleep data for this user.</p>
+                  )}
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Progress Monitoring</h4>
+                  <p className="text-xs text-slate-300">
+                    Behavioral Trend: <span className="font-bold text-amber-300">{selectedTrainee.progressTrend || 'Stable'}</span>
+                  </p>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Snooze Activity: <span className="font-bold text-purple-300">{selectedTrainee.snoozeTrend}</span>
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2">

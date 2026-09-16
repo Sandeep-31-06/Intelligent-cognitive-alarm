@@ -202,10 +202,13 @@ export const initializeDatabase = async (): Promise<boolean> => {
     // 11. Create Notifications Table
     await pool.query(`
       DO $$ BEGIN
-        CREATE TYPE notification_type AS ENUM ('bedtime', 'wakeup', 'habit', 'challenge', 'coaching', 'system');
+        CREATE TYPE notification_type AS ENUM ('bedtime', 'wakeup', 'habit', 'challenge', 'coaching', 'system', 'progress', 'announcement');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
+
+      ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'progress';
+      ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'announcement';
 
       CREATE TABLE IF NOT EXISTS notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

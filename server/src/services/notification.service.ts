@@ -1,12 +1,13 @@
 import { randomUUID } from 'crypto';
 import { db, isDbConnected } from '../db/index.js';
 import { notifications } from '../db/schema/notifications.js';
-import { eq, desc } from 'drizzle-orm';
+import { users } from '../db/schema/users.js';
+import { eq, desc, and, gte } from 'drizzle-orm';
 
 export interface AppNotification {
   id: string;
   userId: string;
-  type: 'bedtime' | 'wakeup' | 'habit' | 'challenge' | 'coaching' | 'system';
+  type: 'bedtime' | 'wakeup' | 'habit' | 'challenge' | 'coaching' | 'system' | 'progress' | 'announcement';
   title: string;
   message: string;
   isRead: boolean;
@@ -14,40 +15,7 @@ export interface AppNotification {
   createdAt: string;
 }
 
-const mockNotificationsStore: Record<string, AppNotification[]> = {
-  'demo-user-id': [
-    {
-      id: 'notif-1',
-      userId: 'demo-user-id',
-      type: 'bedtime',
-      title: 'Digital Sunset Reminder',
-      message: 'It is 10:15 PM. Turn off screens and prepare for optimal REM sleep phase.',
-      isRead: false,
-      scheduledFor: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'notif-2',
-      userId: 'demo-user-id',
-      type: 'wakeup',
-      title: 'Morning Awakening Ready',
-      message: 'Alarm set for 07:00 AM with Smart Adaptive Cognitive Challenge.',
-      isRead: false,
-      scheduledFor: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'notif-3',
-      userId: 'demo-user-id',
-      type: 'habit',
-      title: 'Habit Streak Milestone!',
-      message: 'You have achieved a 14-day streak on Morning Hydration. Keep it up!',
-      isRead: true,
-      scheduledFor: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-  ],
-};
+const mockNotificationsStore: Record<string, AppNotification[]> = {};
 
 const getOrInitNotifications = (userId: string): AppNotification[] => {
   if (!mockNotificationsStore[userId]) {
@@ -75,6 +43,7 @@ export const getUserNotifications = async (userId: string): Promise<AppNotificat
         .from(notifications)
         .where(eq(notifications.userId, userId))
         .orderBy(desc(notifications.createdAt));
+
       if (dbNotifs.length > 0) {
         return dbNotifs.map((n) => ({
           id: n.id,
@@ -83,11 +52,13 @@ export const getUserNotifications = async (userId: string): Promise<AppNotificat
           title: n.title,
           message: n.message,
           isRead: n.isRead,
-          scheduledFor: n.scheduledFor.toISOString(),
-          createdAt: n.createdAt.toISOString(),
+          scheduledFor: n.scheduledFor ? new Date(n.scheduledFor).toISOString() : new Date().toISOString(),
+          createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
         }));
       }
-    } catch (_err) {}
+    } catch (_err) {
+      console.warn('DB notification fetch fallback');
+    }
   }
   return getOrInitNotifications(userId);
 };
@@ -104,7 +75,7 @@ export const markNotificationAsRead = async (userId: string, notificationId: str
       await db
         .update(notifications)
         .set({ isRead: true })
-        .where(eq(notifications.id, notificationId));
+        .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
     } catch (_err) {}
   }
   return true;
@@ -131,8 +102,47 @@ export const sendNotification = async (
   userId: string,
   type: AppNotification['type'],
   title: string,
-  message: string
+  message: string,
+  dedupHours: number = 12
 ): Promise<AppNotification> => {
+  // Deduplication check: Avoid duplicate notifications with the same title created for the same user within dedupHours
+  if (await isDbConnected()) {
+    try {
+      const windowStart = new Date(Date.now() - dedupHours * 60 * 60 * 1000);
+      const existing = await db
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, userId),
+            eq(notifications.title, title),
+            gte(notifications.createdAt, windowStart)
+          )
+        );
+
+      if (existing.length > 0) {
+        const n = existing[0];
+        return {
+          id: n.id,
+          userId: n.userId,
+          type: n.type as any,
+          title: n.title,
+          message: n.message,
+          isRead: n.isRead,
+          scheduledFor: new Date(n.scheduledFor).toISOString(),
+          createdAt: new Date(n.createdAt).toISOString(),
+        };
+      }
+    } catch (_err) {}
+  }
+
+  // Fallback memory check
+  const notifs = getOrInitNotifications(userId);
+  const memoryExisting = notifs.find((n) => n.title === title && Date.now() - new Date(n.createdAt).getTime() < dedupHours * 3600 * 1000);
+  if (memoryExisting) {
+    return memoryExisting;
+  }
+
   const newNotif: AppNotification = {
     id: randomUUID(),
     userId,
@@ -144,7 +154,6 @@ export const sendNotification = async (
     createdAt: new Date().toISOString(),
   };
 
-  const notifs = getOrInitNotifications(userId);
   notifs.unshift(newNotif);
 
   if (await isDbConnected()) {
@@ -152,7 +161,7 @@ export const sendNotification = async (
       await db.insert(notifications).values({
         id: newNotif.id,
         userId,
-        type,
+        type: type as any,
         title,
         message,
         isRead: false,
@@ -162,3 +171,17 @@ export const sendNotification = async (
 
   return newNotif;
 };
+
+export const sendPlatformAnnouncement = async (title: string, message: string): Promise<number> => {
+  if (await isDbConnected()) {
+    try {
+      const allUsers = await db.select({ id: users.id }).from(users);
+      for (const u of allUsers) {
+        await sendNotification(u.id, 'announcement', title, message, 24);
+      }
+      return allUsers.length;
+    } catch (_err) {}
+  }
+  return 0;
+};
+

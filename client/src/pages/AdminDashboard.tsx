@@ -28,8 +28,40 @@ export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [coachesList, setCoachesList] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'users' | 'coaches'>('users');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState('');
+  const [announcementMessage, setAnnouncementMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const handleBroadcastAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementTitle.trim() || !announcementMessage.trim()) {
+      toast.error('Validation Error', 'Please specify title and message');
+      return;
+    }
+
+    setIsBroadcasting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        '/api/notifications/announce',
+        { title: announcementTitle.trim(), message: announcementMessage.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.success) {
+        toast.success('Announcement Broadcasted', res.data.message || 'Platform announcement sent to all users');
+        setAnnouncementTitle('');
+        setAnnouncementMessage('');
+        setShowBroadcastModal(false);
+      }
+    } catch (err: any) {
+      toast.error('Broadcast Error', err.response?.data?.message || 'Failed to broadcast announcement');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -102,6 +134,12 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBroadcastModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-rose-500/20"
+              >
+                <FiTerminal className="w-4 h-4" /> Broadcast Announcement
+              </button>
               <button
                 onClick={() => {
                   fetchAdminData();
@@ -176,6 +214,51 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Recommendation Monitoring & System Reports Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recommendation Monitoring */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <FiBarChart2 className="text-cyan-400" /> Recommendation Engine Aggregates
+            </h2>
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <span className="text-slate-300">Total Recommendations Generated</span>
+                <span className="font-bold text-cyan-300 text-sm">{stats?.recommendationMonitoring?.totalRecommendations ?? 0}</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <span className="text-slate-300">Top Recommendation Category</span>
+                <span className="font-bold text-amber-400 capitalize">{stats?.recommendationMonitoring?.mostCommonCategory ?? 'None yet'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* System Reports Summary */}
+          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <FiActivity className="text-rose-400" /> PostgreSQL System Telemetry Reports
+            </h2>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block uppercase">User Registrations</span>
+                <span className="text-sm font-bold text-white">{stats?.systemReports?.userRegistrationReport?.totalRegistered ?? stats?.totalUsers ?? 0} Total</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block uppercase">Alarm Activity</span>
+                <span className="text-sm font-bold text-purple-300">{stats?.systemReports?.alarmActivityReport?.activeAlarms ?? 0} Active</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block uppercase">Challenge Accuracy</span>
+                <span className="text-sm font-bold text-emerald-400">{stats?.systemReports?.challengeActivityReport?.accuracyRate ?? 'No data yet'}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block uppercase">Platform Habit Score</span>
+                <span className="text-sm font-bold text-cyan-300">{stats?.systemReports?.habitScoreReport?.platformAvgScore ?? 'No data yet'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Pending Coach Approvals Section */}
         {pendingCoaches.length > 0 && (
@@ -354,6 +437,65 @@ export const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Platform Announcement Broadcast Modal */}
+        {showBroadcastModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <FiTerminal className="text-rose-400" /> Platform Announcement
+                </h3>
+                <button onClick={() => setShowBroadcastModal(false)} className="text-slate-400 hover:text-white p-1">
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleBroadcastAnnouncement} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Announcement Title</label>
+                  <input
+                    type="text"
+                    value={announcementTitle}
+                    onChange={(e) => setAnnouncementTitle(e.target.value)}
+                    placeholder="e.g. System Update & New Features"
+                    className="w-full text-xs rounded-xl py-2.5 px-3 bg-slate-950 border border-slate-800 text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Broadcast Message</label>
+                  <textarea
+                    rows={4}
+                    value={announcementMessage}
+                    onChange={(e) => setAnnouncementMessage(e.target.value)}
+                    placeholder="Enter platform-wide announcement message for registered users..."
+                    className="w-full text-xs rounded-xl py-2.5 px-3 bg-slate-950 border border-slate-800 text-white"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowBroadcastModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isBroadcasting}
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all"
+                  >
+                    {isBroadcasting ? 'Broadcasting...' : 'Send Broadcast'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

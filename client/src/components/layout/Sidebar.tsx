@@ -13,6 +13,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiCpu,
+  FiFileText,
 } from 'react-icons/fi';
 
 interface SidebarProps {
@@ -160,6 +161,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
             >
               <FiCheckSquare className="w-4 h-4 flex-shrink-0 text-emerald-400" />
               {!isCollapsed && <span className="truncate">Habits Tracker</span>}
+            </Link>
+
+            <Link
+              to="/reports"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                isActive('/reports')
+                  ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 shadow-md shadow-cyan-500/10'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+              title="Reports & Export System"
+            >
+              <FiFileText className="w-4 h-4 flex-shrink-0 text-cyan-400" />
+              {!isCollapsed && <span className="truncate">Reports & Export</span>}
             </Link>
 
             <Link

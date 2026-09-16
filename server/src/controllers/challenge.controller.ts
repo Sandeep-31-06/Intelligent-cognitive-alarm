@@ -6,6 +6,7 @@ import { challengeAttempts } from '../db/schema/challengeAttempts.js';
 import { updateWakeUpSession } from '../services/wakeUpVerification.service.js';
 import { eq, desc } from 'drizzle-orm';
 import { isUuid } from '../utils/uuid.js';
+import { verifyToken } from '../utils/jwt.js';
 
 // In-memory fallback challenge attempts store
 interface InMemoryAttempt {
@@ -260,7 +261,16 @@ export const generateChallengeEndpoint = async (req: Request, res: Response): Pr
 export const validateChallengeAnswer = async (req: Request, res: Response): Promise<void> => {
   try {
     const { challenge_id, answer, time_taken, challenge_type, difficulty, correct_answer, session_id } = req.body;
-    const userId = req.user?.userId || req.body.user_id || 'demo_user_id';
+    
+    let userId = req.user?.userId;
+    if (!userId && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const payload = verifyToken(token);
+        userId = payload.userId;
+      } catch (_e) {}
+    }
+    if (!userId) userId = req.body.user_id || 'demo_user_id';
 
     if (answer === undefined || answer === null) {
       res.status(400).json({
@@ -306,7 +316,7 @@ export const validateChallengeAnswer = async (req: Request, res: Response): Prom
     // Record challenge attempt history
     const attemptRecord: InMemoryAttempt = {
       id: `att_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      userId,
+      userId: userId || 'demo_user_id',
       challengeId: challenge_id || null,
       answer: String(answer),
       isCorrect,
@@ -365,9 +375,17 @@ export const validateChallengeAnswer = async (req: Request, res: Response): Prom
 // GET /challenges/attempts
 export const getChallengeAttempts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.userId || 'demo_user_id';
+    let userId = req.user?.userId;
+    if (!userId && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const payload = verifyToken(token);
+        userId = payload.userId;
+      } catch (_e) {}
+    }
+    if (!userId) userId = 'demo_user_id';
 
-    if (await isDbConnected()) {
+    if (await isDbConnected() && isUuid(userId)) {
       try {
         const rows = await db
           .select()
@@ -404,10 +422,19 @@ export const getChallengeAttempts = async (req: Request, res: Response): Promise
 // GET /challenges/analytics
 export const getChallengeAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.userId || 'demo_user_id';
+    let userId = req.user?.userId;
+    if (!userId && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const payload = verifyToken(token);
+        userId = payload.userId;
+      } catch (_e) {}
+    }
+    if (!userId) userId = 'demo_user_id';
+
     let attemptsList: any[] = [];
 
-    if (await isDbConnected()) {
+    if (await isDbConnected() && isUuid(userId)) {
       try {
         attemptsList = await db
           .select()
@@ -424,17 +451,18 @@ export const getChallengeAnalytics = async (req: Request, res: Response): Promis
     const totalChallenges = attemptsList.length;
     const correctAnswers = attemptsList.filter((a) => a.isCorrect).length;
     const incorrectAnswers = totalChallenges - correctAnswers;
-    const accuracy = totalChallenges > 0 ? Math.round((correctAnswers / totalChallenges) * 100) : null;
+    const accuracy = totalChallenges > 0 ? Math.round((correctAnswers / totalChallenges) * 100) : 0;
     const totalTime = attemptsList.reduce((acc, curr) => acc + (curr.timeTaken || 0), 0);
     const avgCompletionTime = totalChallenges > 0 ? Math.round(totalTime / totalChallenges) : 0;
 
     // Type performance breakdown
-    const typeBreakdown: Record<string, { total: number; correct: number }> = {};
+    const typeBreakdown: Record<string, { total: number; correct: number; accuracy: number }> = {};
     attemptsList.forEach((a) => {
       const t = a.challengeType || 'math';
-      if (!typeBreakdown[t]) typeBreakdown[t] = { total: 0, correct: 0 };
+      if (!typeBreakdown[t]) typeBreakdown[t] = { total: 0, correct: 0, accuracy: 0 };
       typeBreakdown[t].total += 1;
       if (a.isCorrect) typeBreakdown[t].correct += 1;
+      typeBreakdown[t].accuracy = Math.round((typeBreakdown[t].correct / typeBreakdown[t].total) * 100);
     });
 
     res.status(200).json({

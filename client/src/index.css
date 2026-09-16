@@ -7,25 +7,20 @@
     background-color: #0b0f19;
     color: #f1f5f9;
   }
-  html.light, html.light body, html:not(.dark) body {
-    background-color: #f8fafc;
+  html.light, html.light body {
+    background-color: #f1f5f9;
     color: #0f172a;
   }
 }
 
+/* =========================================================
+   DARK THEME STYLES (Preserved Intact)
+   ========================================================= */
 .dark .glass-panel {
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.light .glass-panel, html:not(.dark) .glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark .glass-input {
@@ -34,32 +29,181 @@
   color: #f8fafc;
 }
 
-.light .glass-input, html:not(.dark) .glass-input {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  color: #0f172a;
-}
-
 .glass-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
+/* Custom Scrollbar - Dark */
+html.dark ::-webkit-scrollbar-track {
   background: #090d16;
 }
-
-::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #1e293b;
   border-radius: 4px;
 }
-
-::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+/* =========================================================
+   LIGHT THEME STYLES (High-Contrast, Polished Visual Design)
+   ========================================================= */
+html.light .glass-panel,
+html.light .glass-card {
+  background: #ffffff;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+}
+
+html.light .glass-input,
+html.light input[type="text"],
+html.light input[type="number"],
+html.light input[type="email"],
+html.light input[type="password"],
+html.light select,
+html.light textarea {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Containers & Background Overrides in Light Theme */
+html.light main,
+html.light .min-h-screen {
+  background-color: #f1f5f9;
+}
+
+html.light [class*="bg-slate-950"],
+html.light [class*="bg-slate-900"] {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+html.light [class*="bg-slate-950/"],
+html.light [class*="bg-slate-900/"] {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+/* Text Color Contrast Mapping in Light Theme */
+html.light .text-white,
+html.light [class*="text-white"] {
+  color: #0f172a;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light .text-slate-300 {
+  color: #1e293b;
+}
+
+html.light .text-slate-400,
+html.light .text-slate-500 {
+  color: #64748b;
+}
+
+/* High Contrast Colored Text for Light Mode */
+html.light .text-blue-400,
+html.light .text-blue-300 {
+  color: #2563eb;
+}
+
+html.light .text-indigo-400,
+html.light .text-indigo-300 {
+  color: #4f46e5;
+}
+
+html.light .text-emerald-400,
+html.light .text-emerald-300 {
+  color: #059669;
+}
+
+html.light .text-amber-400,
+html.light .text-amber-300 {
+  color: #d97706;
+}
+
+html.light .text-purple-400,
+html.light .text-purple-300 {
+  color: #9333ea;
+}
+
+html.light .text-rose-400,
+html.light .text-rose-300 {
+  color: #e11d48;
+}
+
+html.light .text-cyan-400,
+html.light .text-cyan-300 {
+  color: #0891b2;
+}
+
+/* Borders & Dividers in Light Theme */
+html.light [class*="border-slate-800"],
+html.light [class*="border-slate-700"],
+html.light [class*="divide-slate-800"] {
+  border-color: #e2e8f0;
+}
+
+/* Sidebar & Header in Light Theme */
+html.light aside {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
+html.light header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html.light aside a:hover,
+html.light aside button:hover {
+  background-color: #f1f5f9;
+}
+
+/* Tables in Light Theme */
+html.light table {
+  border-color: #e2e8f0;
+}
+
+html.light table thead {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html.light table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+html.light table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Modals & Overlays in Light Theme */
+html.light .fixed.inset-0 {
+  background-color: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* Custom Scrollbar - Light */
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 
