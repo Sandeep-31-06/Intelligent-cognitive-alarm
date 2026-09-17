@@ -404,7 +404,7 @@ export const exportReportToPdf = async (report: ReportData): Promise<Buffer> => 
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers: Buffer[] = [];
 
-      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('data', (chunk: Buffer) => buffers.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
       // Primary Brand Header Banner
